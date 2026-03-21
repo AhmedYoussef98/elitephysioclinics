@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import type { TimeSlot } from '../../lib/types';
+import { supabase } from '../../lib/supabase';
+import { useClinicHours } from '../../context/ClinicHoursContext';
+import type { TimeSlot, UnavailableSlot } from '../../lib/types';
+import { SLOT_DURATION_MINUTES } from '../../lib/constants';
 
 interface TimeSlotPickerProps {
   date: string;
@@ -16,7 +19,38 @@ function formatTime12h(time24: string): string {
   return `${h12}:${String(m).padStart(2, '0')} ${period}`;
 }
 
+function getDayName(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'long' });
+}
+
 export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({ date, selectedTime, onSelect, isMobile }) => {
+  const { hours: clinicHours } = useClinicHours();
+
+  function generateSlots(dateStr: string): TimeSlot[] {
+    const dayName = getDayName(dateStr);
+    const hours = clinicHours[dayName];
+    if (!hours) return [];
+
+    const slots: TimeSlot[] = [];
+    const [startH, startM] = hours.start.split(':').map(Number);
+    const [endH, endM] = hours.end.split(':').map(Number);
+    const startMin = startH * 60 + startM;
+    const endMin = endH * 60 + endM;
+
+    for (let min = startMin; min + SLOT_DURATION_MINUTES <= endMin; min += SLOT_DURATION_MINUTES) {
+      const sh = Math.floor(min / 60);
+      const sm = min % 60;
+      const eh = Math.floor((min + SLOT_DURATION_MINUTES) / 60);
+      const em = (min + SLOT_DURATION_MINUTES) % 60;
+      slots.push({
+        startTime: `${String(sh).padStart(2, '0')}:${String(sm).padStart(2, '0')}`,
+        endTime: `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`,
+        available: true,
+      });
+    }
+    return slots;
+  }
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -30,21 +64,33 @@ export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({ date, selectedTi
     setLoading(true);
     setError('');
 
-    fetch(`/api/availability?date=${date}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.error) {
-          setError(data.message || data.error);
-          setSlots([]);
-        } else {
-          setSlots(data.slots || []);
+    const allSlots = generateSlots(date);
+
+    (async () => {
+      try {
+        const { data, error: rpcError } = await supabase.rpc('get_unavailable_slots', { booking_date: date });
+
+        if (rpcError) {
+          setError('Unable to check availability. Please try again or contact us directly.');
+          setSlots(allSlots);
+          return;
         }
-      })
-      .catch(() => {
-        setError('Failed to load available times. Please try again.');
-        setSlots([]);
-      })
-      .finally(() => setLoading(false));
+
+        const unavailable = (data as UnavailableSlot[]) || [];
+        const unavailableTimes = new Set(unavailable.map(s => s.start_time.substring(0, 5)));
+
+        const merged = allSlots.map(slot => ({
+          ...slot,
+          available: !unavailableTimes.has(slot.startTime),
+        }));
+        setSlots(merged);
+      } catch {
+        setError('Unable to check availability. Please try again or contact us directly.');
+        setSlots(allSlots);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [date]);
 
   if (!date) return null;

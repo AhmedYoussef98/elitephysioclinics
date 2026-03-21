@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Routes, Route } from 'react-router';
 import { Player } from '@remotion/player';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { HeroComposition } from './remotion/HeroComposition';
@@ -7,6 +8,15 @@ import {
   CheckCircle, Menu, X, Star, Shield, Heart, Award,
 } from 'lucide-react';
 import { BookingForm } from './components/booking/BookingForm';
+import { useClinicHours } from './context/ClinicHoursContext';
+import { LoginForm } from './components/admin/LoginForm';
+import { ProtectedRoute } from './components/admin/ProtectedRoute';
+import { AdminLayout } from './components/admin/AdminLayout';
+import { Dashboard } from './components/admin/Dashboard';
+import { AppointmentList } from './components/admin/AppointmentList';
+import { CreateAppointment } from './components/admin/CreateAppointment';
+import { AvailabilityManager } from './components/admin/AvailabilityManager';
+import { WorkingHours } from './components/admin/WorkingHours';
 
 // ─────────────────────────────────────────────
 // DATA
@@ -959,14 +969,41 @@ const InsuranceSection = () => {
 
 const ContactSection = () => {
   const { isMobile, isTablet } = useBreakpoint();
+  const { hours: clinicHours } = useClinicHours();
   const px = isMobile ? '20px' : '48px';
   const py = isMobile ? '64px' : '120px';
+
+  const formatHoursDisplay = () => {
+    const fmt = (t: string) => {
+      const [h, m] = t.split(':').map(Number);
+      const p = h >= 12 ? 'PM' : 'AM';
+      return `${h === 0 ? 12 : h > 12 ? h - 12 : h}:${String(m).padStart(2, '0')} ${p}`;
+    };
+    const lines: string[] = [];
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    // Group consecutive days with same hours
+    let i = 0;
+    while (i < days.length) {
+      const h = clinicHours[days[i]];
+      if (!h) { i++; continue; }
+      let j = i;
+      while (j + 1 < days.length) {
+        const next = clinicHours[days[j + 1]];
+        if (next && next.start === h.start && next.end === h.end) j++;
+        else break;
+      }
+      const label = i === j ? days[i].substring(0, 3) : `${days[i].substring(0, 3)} – ${days[j].substring(0, 3)}`;
+      lines.push(`${label} · ${fmt(h.start)} – ${fmt(h.end)}`);
+      i = j + 1;
+    }
+    return lines.join('\n') || 'Contact us for hours';
+  };
 
   const details = [
     { icon: MapPin, label: 'Location', value: 'Mare Fair, Sol Central\nGround Floor, Unit 3\nNorthampton NN1 1SR' },
     { icon: Phone, label: 'Phone', value: '+44 333 577 9553' },
     { icon: Mail, label: 'Email', value: 'elitephysioclinics@gmail.com' },
-    { icon: Clock, label: 'Hours', value: 'Mon – Fri · 4:30 PM – 9:00 PM\nSaturday · 8:00 AM – 9:00 PM' },
+    { icon: Clock, label: 'Hours', value: formatHoursDisplay() },
   ];
 
   return (
@@ -1134,7 +1171,7 @@ const Footer = () => {
 // APP
 // ─────────────────────────────────────────────
 
-export default function App() {
+function Website() {
   return (
     <div style={{ fontFamily: 'Outfit, sans-serif', background: '#0a1f13' }}>
       <NavBar />
@@ -1149,5 +1186,23 @@ export default function App() {
       <ContactSection />
       <Footer />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/*" element={<Website />} />
+      <Route path="/clinic-portal/login" element={<LoginForm />} />
+      <Route element={<ProtectedRoute />}>
+        <Route path="/clinic-portal" element={<AdminLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="appointments" element={<AppointmentList />} />
+          <Route path="new" element={<CreateAppointment />} />
+          <Route path="availability" element={<AvailabilityManager />} />
+          <Route path="hours" element={<WorkingHours />} />
+        </Route>
+      </Route>
+    </Routes>
   );
 }

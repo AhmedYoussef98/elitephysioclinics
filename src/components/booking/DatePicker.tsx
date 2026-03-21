@@ -1,6 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { BOOKING_WINDOW_WEEKS } from '../../lib/constants';
+import { supabase } from '../../lib/supabase';
+import { useClinicHours } from '../../context/ClinicHoursContext';
 
 interface DatePickerProps {
   selectedDate: string;
@@ -16,6 +18,9 @@ function formatDateKey(d: Date): string {
 }
 
 export const DatePicker: React.FC<DatePickerProps> = ({ selectedDate, onSelect, isMobile }) => {
+  const { hours: clinicHours } = useClinicHours();
+  const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set());
+
   const dates = useMemo(() => {
     const result: Date[] = [];
     const today = new Date();
@@ -31,11 +36,23 @@ export const DatePicker: React.FC<DatePickerProps> = ({ selectedDate, onSelect, 
     return result;
   }, []);
 
+  useEffect(() => {
+    if (dates.length === 0) return;
+    const fromDate = formatDateKey(dates[0]);
+    const toDate = formatDateKey(dates[dates.length - 1]);
+
+    supabase.rpc('get_blocked_dates', { from_date: fromDate, to_date: toDate })
+      .then(({ data }) => {
+        if (data) {
+          setBlockedDates(new Set(data.map((d: { blocked_date: string }) => d.blocked_date)));
+        }
+      });
+  }, [dates]);
+
   const weeks = useMemo(() => {
     const grouped: Date[][] = [];
     let week: Date[] = [];
     const firstDay = dates[0].getDay();
-    // Pad start (Mon=1 based, fill blanks for display)
     const mondayOffset = firstDay === 0 ? 6 : firstDay - 1;
     for (let i = 0; i < mondayOffset; i++) week.push(null as any);
 
@@ -73,7 +90,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({ selectedDate, onSelect, 
         Select Date
       </div>
 
-      {/* Day headers */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(7, 1fr)',
@@ -95,7 +111,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({ selectedDate, onSelect, 
         ))}
       </div>
 
-      {/* Calendar grid */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {weeks.map((week, wi) => (
           <div key={wi} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
@@ -103,11 +118,13 @@ export const DatePicker: React.FC<DatePickerProps> = ({ selectedDate, onSelect, 
               if (!day) return <div key={di} />;
 
               const dateStr = formatDateKey(day);
-              const isSunday = day.getDay() === 0;
+              const dayName = day.toLocaleDateString('en-US', { weekday: 'long' });
+              const isClosedDay = clinicHours[dayName] === null || clinicHours[dayName] === undefined;
               const today = new Date();
               today.setHours(0, 0, 0, 0);
               const isPast = day < today;
-              const isDisabled = isSunday || isPast;
+              const isBlocked = blockedDates.has(dateStr);
+              const isDisabled = isClosedDay || isPast || isBlocked;
               const isSelected = dateStr === selectedDate;
               const isToday = formatDateKey(today) === dateStr;
 
@@ -125,7 +142,9 @@ export const DatePicker: React.FC<DatePickerProps> = ({ selectedDate, onSelect, 
                         : '1px solid rgba(255,255,255,0.04)',
                     background: isSelected
                       ? 'rgba(201,160,66,0.15)'
-                      : 'rgba(255,255,255,0.02)',
+                      : isBlocked
+                        ? 'rgba(220,60,60,0.08)'
+                        : 'rgba(255,255,255,0.02)',
                     color: isDisabled
                       ? 'rgba(250,246,239,0.15)'
                       : isSelected

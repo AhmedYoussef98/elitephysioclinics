@@ -8,7 +8,9 @@ import { TimeSlotPicker } from './TimeSlotPicker';
 import { PatientDetails } from './PatientDetails';
 import { Confirmation } from './Confirmation';
 import { patientSchema } from '../../lib/validation';
-import type { BookingWithCondition } from '../../lib/types';
+import { supabase } from '../../lib/supabase';
+import { CONDITIONS } from '../../lib/constants';
+import type { BookingWithCondition, BookAppointmentResponse } from '../../lib/types';
 
 interface BookingFormProps {
   isMobile: boolean;
@@ -71,37 +73,39 @@ export const BookingForm: React.FC<BookingFormProps> = ({ isMobile }) => {
     setErrors({});
 
     try {
-      const res = await fetch('/api/book', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          patientName,
-          patientPhone,
-          patientEmail,
-          conditionSlug: selectedCondition,
-          date: selectedDate,
-          startTime: selectedTime,
-        }),
+      const conditionTitle = CONDITIONS.find(c => c.slug === selectedCondition)?.title || selectedCondition;
+
+      const { data, error } = await supabase.rpc('book_appointment', {
+        p_patient_name: patientName,
+        p_patient_phone: patientPhone,
+        p_patient_email: patientEmail,
+        p_condition_slug: selectedCondition,
+        p_condition_title: conditionTitle,
+        p_date: selectedDate,
+        p_start_time: selectedTime,
       });
 
-      const data = await res.json();
-
-      if (res.status === 201) {
-        setBooking(data.booking);
-      } else if (res.status === 409) {
-        setSubmitError(data.message || 'This time slot is no longer available. Please go back and select a different time.');
-      } else if (res.status === 400) {
-        if (data.details) {
-          const fieldErrors: Record<string, string> = {};
-          for (const d of data.details) {
-            fieldErrors[d.field] = d.message;
-          }
-          setErrors(fieldErrors);
-        } else {
-          setSubmitError(data.message || 'Please check your details and try again.');
-        }
+      if (error) {
+        setSubmitError('Something went wrong. Please try again or contact us directly.');
       } else {
-        setSubmitError('Something went wrong. Please try again.');
+        const response = data as BookAppointmentResponse;
+        if (response.success && response.data) {
+          setBooking({
+            id: response.data.id,
+            patientName: response.data.patientName,
+            patientPhone: response.data.patientPhone,
+            patientEmail: response.data.patientEmail,
+            conditionSlug: response.data.conditionSlug,
+            conditionTitle: response.data.conditionTitle,
+            date: response.data.date,
+            startTime: response.data.startTime,
+            endTime: response.data.endTime,
+            status: 'confirmed',
+            createdAt: new Date().toISOString(),
+          } as BookingWithCondition);
+        } else {
+          setSubmitError(response.error || 'This time slot is no longer available. Please go back and select a different time.');
+        }
       }
     } catch {
       setSubmitError('Network error. Please check your connection and try again.');

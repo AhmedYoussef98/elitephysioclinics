@@ -36,20 +36,32 @@ export interface BookingRequest {
   startTime: string;
 }
 
-export interface AvailabilityResponse {
-  date: string;
-  dayOfWeek: string;
-  clinicHours: {
-    start: string;
-    end: string;
-  };
-  slots: TimeSlot[];
+export interface UnavailableSlot {
+  start_time: string;
+  end_time: string;
+  reason: string;
 }
 
-export interface ApiError {
-  error: string;
-  message?: string;
-  details?: { field: string; message: string }[];
+export interface BlockedDate {
+  blocked_date: string;
+}
+
+export interface BookAppointmentResponse {
+  success: boolean;
+  error?: string;
+  data?: {
+    id: string;
+    bookingReference: string;
+    patientName: string;
+    patientPhone: string;
+    patientEmail: string;
+    conditionSlug: string;
+    conditionTitle: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    status: string;
+  };
 }
 
 export interface ClinicHours {
