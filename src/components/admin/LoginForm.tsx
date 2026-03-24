@@ -37,7 +37,7 @@ export const LoginForm: React.FC = () => {
       <div className="login-container">
         {/* Brand */}
         <div className="login-brand">
-          <div className="login-logo-mark">EP</div>
+          <img src="/logo.png" alt="Elite Physio Clinics" className="login-logo-img" />
           <h1 className="login-title">Elite Physio Clinics</h1>
           <div className="login-divider" />
           <p className="login-subtitle">Administration Portal</p>
