@@ -387,16 +387,18 @@ input:focus, textarea:focus, select:focus {
 /* ══════════════════════════
    ACTIONS DROPDOWN
    ══════════════════════════ */
-.actions-wrap { position: relative; }
+.actions-wrap { display: inline-flex; }
 .actions-trigger { background: var(--admin-surface-2); border: 1px solid var(--admin-border); color: var(--admin-text-dim); cursor: pointer; padding: 5px 8px; border-radius: 5px; display: flex; transition: all 0.15s; }
 .actions-trigger:hover { color: var(--admin-text); border-color: var(--admin-border-hover); }
-.actions-backdrop { position: fixed; inset: 0; z-index: 50; }
-.actions-dropdown { position: absolute; right: 0; top: calc(100% + 4px); background: var(--admin-surface-2); border: 1px solid var(--admin-border-hover); border-radius: 8px; min-width: 200px; z-index: 51; padding: 4px; box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+.actions-backdrop { position: fixed; inset: 0; z-index: 999; }
+.actions-dropdown { background: var(--admin-surface-2); border: 1px solid var(--admin-border-hover); border-radius: 8px; min-width: 200px; z-index: 1000; padding: 4px; box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
 .actions-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 12px; background: none; border: none; color: var(--admin-text-dim); font-size: 13px; font-family: var(--admin-font); cursor: pointer; border-radius: 5px; transition: all 0.15s; text-align: left; }
 .actions-item:hover { background: rgba(255,255,255,0.04); }
 .actions-item-complete:hover { color: var(--admin-green); }
 .actions-item-reschedule:hover { color: var(--admin-amber); }
 .actions-item-cancel:hover { color: var(--admin-red); }
+.actions-item-delete { color: var(--admin-text-muted); }
+.actions-item-delete:hover { color: var(--admin-red); background: rgba(239,68,68,0.06); }
 .actions-item:disabled { opacity: 0.4; cursor: not-allowed; }
 .actions-divider { height: 1px; background: var(--admin-border); margin: 4px 0; }
 .actions-reschedule { padding: 12px; border-top: 1px solid var(--admin-border); display: flex; flex-direction: column; gap: 8px; }

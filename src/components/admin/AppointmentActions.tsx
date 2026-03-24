@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../../lib/supabase';
-import { XCircle, CheckCircle, RefreshCw, MoreHorizontal, X } from 'lucide-react';
+import { XCircle, CheckCircle, RefreshCw, MoreHorizontal, X, Trash2, RotateCcw } from 'lucide-react';
 
 interface Appointment {
   id: string;
@@ -26,8 +27,49 @@ export const AppointmentActions: React.FC<AppointmentActionsProps> = ({ appointm
   const [newTime, setNewTime] = useState('');
   const [actionLoading, setActionLoading] = useState('');
   const [error, setError] = useState('');
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
 
-  if (appointment.status !== 'confirmed') return <span className="apt-actions-none">--</span>;
+  const closeMenu = useCallback(() => {
+    setShowMenu(false);
+    setShowReschedule(false);
+    setError('');
+  }, []);
+
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const dropdownHeight = showReschedule ? 320 : 220;
+    const fitsBelow = rect.bottom + 4 + dropdownHeight < window.innerHeight;
+
+    setDropdownPos({
+      top: fitsBelow
+        ? rect.bottom + 4 + window.scrollY
+        : rect.top - 4 - dropdownHeight + window.scrollY,
+      left: Math.max(8, rect.right + window.scrollX - 200),
+    });
+  }, [showReschedule]);
+
+  useEffect(() => {
+    if (showMenu) {
+      updatePosition();
+      const container = triggerRef.current?.closest('.apt-table-container');
+      const handleClose = () => closeMenu();
+      container?.addEventListener('scroll', handleClose);
+      window.addEventListener('resize', handleClose);
+      return () => {
+        container?.removeEventListener('scroll', handleClose);
+        window.removeEventListener('resize', handleClose);
+      };
+    }
+  }, [showMenu, updatePosition, closeMenu]);
+
+  useEffect(() => {
+    if (showMenu) updatePosition();
+  }, [showReschedule, showMenu, updatePosition]);
+
+  const status = appointment.status;
+  const isConfirmed = status === 'confirmed';
 
   const handleCancel = async () => {
     if (!confirm(`Cancel appointment for ${appointment.patient_name}?`)) return;
@@ -38,9 +80,8 @@ export const AppointmentActions: React.FC<AppointmentActionsProps> = ({ appointm
       .update({ status: 'cancelled' })
       .eq('id', appointment.id);
     if (err) setError('Failed to cancel');
-    else onUpdate();
+    else { onUpdate(); closeMenu(); }
     setActionLoading('');
-    setShowMenu(false);
   };
 
   const handleComplete = async () => {
@@ -51,9 +92,33 @@ export const AppointmentActions: React.FC<AppointmentActionsProps> = ({ appointm
       .update({ status: 'completed' })
       .eq('id', appointment.id);
     if (err) setError('Failed to complete');
-    else onUpdate();
+    else { onUpdate(); closeMenu(); }
     setActionLoading('');
-    setShowMenu(false);
+  };
+
+  const handleReconfirm = async () => {
+    setActionLoading('reconfirm');
+    setError('');
+    const { error: err } = await supabase
+      .from('appointments')
+      .update({ status: 'confirmed' })
+      .eq('id', appointment.id);
+    if (err) setError('Failed to reconfirm');
+    else { onUpdate(); closeMenu(); }
+    setActionLoading('');
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(`Permanently delete appointment for ${appointment.patient_name}? This cannot be undone.`)) return;
+    setActionLoading('delete');
+    setError('');
+    const { error: err } = await supabase
+      .from('appointments')
+      .delete()
+      .eq('id', appointment.id);
+    if (err) setError('Failed to delete');
+    else { onUpdate(); closeMenu(); }
+    setActionLoading('');
   };
 
   const handleReschedule = async () => {
@@ -83,8 +148,7 @@ export const AppointmentActions: React.FC<AppointmentActionsProps> = ({ appointm
       await supabase.from('appointments').update({ status: 'confirmed' }).eq('id', appointment.id);
       setError(result.error || 'Slot unavailable');
     } else {
-      setShowReschedule(false);
-      setShowMenu(false);
+      closeMenu();
       onUpdate();
     }
     setActionLoading('');
@@ -92,23 +156,47 @@ export const AppointmentActions: React.FC<AppointmentActionsProps> = ({ appointm
 
   return (
     <div className="actions-wrap">
-      <button className="actions-trigger" onClick={() => setShowMenu(!showMenu)}>
+      <button ref={triggerRef} className="actions-trigger" onClick={() => setShowMenu(!showMenu)}>
         <MoreHorizontal size={16} />
       </button>
 
-      {showMenu && (
+      {showMenu && dropdownPos && createPortal(
         <>
-          <div className="actions-backdrop" onClick={() => { setShowMenu(false); setShowReschedule(false); }} />
-          <div className="actions-dropdown">
-            <button onClick={handleComplete} disabled={!!actionLoading} className="actions-item actions-item-complete">
-              <CheckCircle size={15} /> Mark Complete
-            </button>
-            <button onClick={() => setShowReschedule(!showReschedule)} disabled={!!actionLoading} className="actions-item actions-item-reschedule">
-              <RefreshCw size={15} /> Reschedule
-            </button>
+          <div className="actions-backdrop" onClick={closeMenu} />
+          <div
+            className="actions-dropdown"
+            style={{
+              position: 'absolute',
+              top: dropdownPos.top,
+              left: dropdownPos.left,
+            }}
+          >
+            {/* Confirmed: Complete, Reschedule, Cancel */}
+            {isConfirmed && (
+              <>
+                <button onClick={handleComplete} disabled={!!actionLoading} className="actions-item actions-item-complete">
+                  <CheckCircle size={15} /> Mark Complete
+                </button>
+                <button onClick={() => setShowReschedule(!showReschedule)} disabled={!!actionLoading} className="actions-item actions-item-reschedule">
+                  <RefreshCw size={15} /> Reschedule
+                </button>
+                <button onClick={handleCancel} disabled={!!actionLoading} className="actions-item actions-item-cancel">
+                  <XCircle size={15} /> Cancel
+                </button>
+              </>
+            )}
+
+            {/* Cancelled / Completed / Rescheduled: Reconfirm */}
+            {!isConfirmed && (
+              <button onClick={handleReconfirm} disabled={!!actionLoading} className="actions-item actions-item-complete">
+                <RotateCcw size={15} /> Reconfirm
+              </button>
+            )}
+
+            {/* Always available: Delete */}
             <div className="actions-divider" />
-            <button onClick={handleCancel} disabled={!!actionLoading} className="actions-item actions-item-cancel">
-              <XCircle size={15} /> Cancel Appointment
+            <button onClick={handleDelete} disabled={!!actionLoading} className="actions-item actions-item-delete">
+              <Trash2 size={15} /> Delete Permanently
             </button>
 
             {showReschedule && (
@@ -127,7 +215,8 @@ export const AppointmentActions: React.FC<AppointmentActionsProps> = ({ appointm
 
             {error && <div className="actions-error">{error}</div>}
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );
