@@ -130,8 +130,9 @@ export const PatientDetails: React.FC<PatientDetailsProps> = ({ name, phone, ema
             }}>
               I consent to Elite Physio Clinics processing my personal data for the purpose of booking this appointment.{' '}
               <a
-                href="#"
-                onClick={e => e.preventDefault()}
+                href="/privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{ color: '#c9a042', textDecoration: 'underline' }}
               >
                 Privacy Policy

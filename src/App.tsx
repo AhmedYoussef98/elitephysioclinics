@@ -17,6 +17,7 @@ import { AppointmentList } from './components/admin/AppointmentList';
 import { CreateAppointment } from './components/admin/CreateAppointment';
 import { AvailabilityManager } from './components/admin/AvailabilityManager';
 import { WorkingHours } from './components/admin/WorkingHours';
+import { PrivacyPolicy } from './pages/PrivacyPolicy';
 
 // ─────────────────────────────────────────────
 // DATA
@@ -1161,6 +1162,11 @@ const Footer = () => {
               onMouseLeave={e => (e.currentTarget.style.color = 'rgba(250,246,239,0.28)')}
             >{l}</a>
           ))}
+          <a href="/privacy-policy" target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: 11, color: 'rgba(250,246,239,0.28)', textDecoration: 'none', letterSpacing: '0.14em', textTransform: 'uppercase', fontFamily: 'Outfit, sans-serif', transition: 'color 0.3s' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'rgba(201,160,66,0.7)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(250,246,239,0.28)')}
+          >Privacy Policy</a>
         </div>
       </div>
     </footer>
@@ -1193,6 +1199,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/*" element={<Website />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       <Route path="/clinic-portal/login" element={<LoginForm />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/clinic-portal" element={<AdminLayout />}>
