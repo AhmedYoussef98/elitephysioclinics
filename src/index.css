@@ -65,6 +65,19 @@ body::after {
   100% { transform: translateX(-50%); }
 }
 
+/* WhatsApp floating button pulse */
+.whatsapp-float {
+  animation: whatsapp-pulse 2.5s ease-in-out infinite;
+}
+.whatsapp-float:hover {
+  animation: none;
+}
+
+@keyframes whatsapp-pulse {
+  0%, 100% { box-shadow: 0 4px 14px rgba(37,211,102,0.4); }
+  50% { box-shadow: 0 4px 24px rgba(37,211,102,0.65), 0 0 0 8px rgba(37,211,102,0.1); }
+}
+
 /* Nav hover link */
 .nav-link {
   position: relative;

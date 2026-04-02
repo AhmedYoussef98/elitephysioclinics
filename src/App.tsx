@@ -5,7 +5,7 @@ import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { HeroComposition } from './remotion/HeroComposition';
 import {
   Phone, Mail, MapPin, Clock, ChevronDown, ArrowRight,
-  CheckCircle, Menu, X, Star, Shield, Heart, Award,
+  CheckCircle, Menu, X, Star, Shield, Heart, Award, MessageCircle,
 } from 'lucide-react';
 import { BookingForm } from './components/booking/BookingForm';
 import { useClinicHours } from './context/ClinicHoursContext';
@@ -23,16 +23,32 @@ import { PrivacyPolicy } from './pages/PrivacyPolicy';
 // DATA
 // ─────────────────────────────────────────────
 
+const WHATSAPP_URL = 'https://wa.me/447405825954?text=Hello%2C%20I%27d%20like%20to%20book%20an%20appointment%20at%20Elite%20Physio%20Clinics.';
+
 const SERVICES = [
-  { title: 'Back Pain & Sciatica', icon: '⬡', desc: 'Expert treatment for lumbar disc conditions, spinal stenosis, and sciatic nerve pain along the full nerve pathway.' },
-  { title: 'Neck Pain & Whiplash', icon: '◈', desc: 'Comprehensive cervical spine assessment and mobilisation for acute and chronic neck conditions.' },
-  { title: 'Sports Injuries', icon: '◇', desc: 'From acute ligament sprains to chronic overuse conditions — treatment for athletes at every level.' },
-  { title: 'Arthritis Management', icon: '⬟', desc: 'Evidence-based strategies to reduce pain, improve joint mobility, and maintain quality of life.' },
-  { title: 'Post-Surgical Rehab', icon: '✦', desc: 'Structured progressive rehabilitation programs following orthopaedic and spinal surgery.' },
-  { title: 'Frozen Shoulder', icon: '◉', desc: 'Specialised capsular mobilisation and graded stretching for adhesive capsulitis at all stages.' },
-  { title: 'Tendon & Elbow', icon: '▲', desc: 'Targeted loading therapy for tennis elbow, golfer\'s elbow, and tendinopathy conditions.' },
-  { title: 'Knee & Ankle', icon: '◈', desc: 'Biomechanical assessment and targeted rehabilitation for lower limb conditions and instability.' },
-  { title: 'Paediatric Neurology', icon: '✧', desc: 'Specialist care for children with neurological and developmental disorders — a rare and valued expertise.' },
+  { title: 'Back Pain & Sciatica', desc: 'Expert treatment for lumbar disc conditions, spinal stenosis, and sciatic nerve pain along the full nerve pathway.' },
+  { title: 'Neck Pain & Whiplash', desc: 'Comprehensive cervical spine assessment and mobilisation for acute and chronic neck conditions.' },
+  { title: 'Sports Injuries', desc: 'From acute ligament sprains to chronic overuse conditions — treatment for athletes at every level.' },
+  { title: 'Arthritis Management', desc: 'Evidence-based strategies to reduce pain, improve joint mobility, and maintain quality of life.' },
+  { title: 'Post-Surgical Rehab', desc: 'Structured progressive rehabilitation programs following orthopaedic and spinal surgery.' },
+  { title: 'Frozen Shoulder', desc: 'Specialised capsular mobilisation and graded stretching for adhesive capsulitis at all stages.' },
+  { title: 'Tendon Injuries', desc: 'Targeted loading therapy for tennis elbow, golfer\'s elbow, and tendinopathy conditions.' },
+  { title: 'Knee & Ankle', desc: 'Biomechanical assessment and targeted rehabilitation for lower limb conditions and instability.' },
+];
+
+const PEDIATRIC_SERVICES = [
+  { title: 'Head Turning Preference & Torticollis', desc: 'Assessment and treatment for infant neck tightness, head turning preference, and associated movement asymmetry.' },
+  { title: 'Flat Head Syndrome', desc: 'Management of Brachycephaly and Plagiocephaly through positioning guidance, physiotherapy, and developmental support.' },
+  { title: 'Delayed Developmental Milestones', desc: 'Support for infants and children experiencing delays in motor skills such as rolling, sitting, crawling, and walking.' },
+  { title: 'Cerebral Palsy & Birth-Related Conditions', desc: 'Individualized therapy programs to improve movement control, strength, and functional independence.' },
+  { title: 'Balance & Coordination Difficulties', desc: 'Targeted rehabilitation for Developmental Coordination Disorder (DCD) and other motor coordination challenges.' },
+  { title: 'Chromosomal, Genetic & Neurological Conditions', desc: 'Specialist physiotherapy care supporting movement, posture, and development in complex conditions.' },
+  { title: 'Positional Talipes (Clubfoot)', desc: 'Early intervention and therapeutic management to improve foot positioning and mobility.' },
+  { title: 'Gait Disorders', desc: 'Assessment and treatment for walking abnormalities including flat feet, intoeing, and out-toeing.' },
+  { title: 'Musculoskeletal Conditions in Children', desc: 'Management of growth-related and orthopaedic conditions affecting bones, joints, and muscles.' },
+  { title: 'Osgood-Schlatter Disease', desc: 'Treatment for activity-related knee pain common in growing adolescents.' },
+  { title: 'Sever\'s Disease', desc: 'Rehabilitation strategies to relieve heel pain associated with growth plate irritation.' },
+  { title: 'Osteochondritis Dissecans', desc: 'Specialised care for joint cartilage and bone conditions affecting young athletes.' },
 ];
 
 const STATS = [
@@ -57,9 +73,9 @@ const CREDENTIALS = [
   { label: 'Doctor of Physiotherapy (DPT)', highlight: true },
   { label: 'MSc Physiotherapy — Coventry University', highlight: false },
   { label: 'Chartered Physiotherapist (MCSP)', highlight: false },
-  { label: '20+ Years NHS Musculoskeletal Specialist', highlight: true },
+  { label: '20+ Years Musculoskeletal Specialist', highlight: true },
   { label: 'Post-Graduate Musculoskeletal Training', highlight: false },
-  { label: 'Specialist — Paediatric Neurological Conditions', highlight: false },
+  { label: 'Specialist — Paediatric Physiotherapy', highlight: false },
 ];
 
 const NAV_LINKS = ['Services', 'About', 'Insurance', 'Contact'];
@@ -232,6 +248,17 @@ const NavBar = () => {
             <div style={{ marginTop: 24, fontSize: 11, color: 'rgba(250,246,239,0.25)', letterSpacing: '0.12em', fontFamily: 'Outfit, sans-serif' }}>
               +44 333 577 9553
             </div>
+            <a
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setOpen(false)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, fontSize: 11, color: 'rgba(37,211,102,0.7)', letterSpacing: '0.12em', fontFamily: 'Outfit, sans-serif', textDecoration: 'none', transition: 'color 0.2s' }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#25D366')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(37,211,102,0.7)')}
+            >
+              <MessageCircle size={12} /> WhatsApp
+            </a>
           </motion.div>
         )}
       </AnimatePresence>
@@ -425,7 +452,7 @@ const HeroSection = () => {
         >
           <div style={{ width: 24, height: 1, background: 'rgba(201,160,66,0.35)' }} />
           <span style={{ fontSize: 10, color: 'rgba(201,160,66,0.5)', letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'Outfit, sans-serif' }}>
-            Led by Dr. Wafaa Ibrahim · DPT · MSc
+            Led by Wafaa Ibrahim · DPT · MSc
           </span>
         </motion.div>
       )}
@@ -487,11 +514,57 @@ const StatsSection = () => {
 // SERVICES
 // ─────────────────────────────────────────────
 
+const ConditionCard = ({ title, desc, index, isMobile, delay }: { title: string; desc: string; index: number; isMobile: boolean; delay: number }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 18 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.4, delay }}
+    className="service-card"
+    style={{
+      padding: isMobile ? '24px 20px' : '32px 28px',
+      background: 'rgba(6,14,9,0.55)',
+      backdropFilter: 'blur(12px)',
+      border: '1px solid rgba(201,160,66,0.1)',
+      position: 'relative',
+      overflow: 'hidden',
+    }}
+  >
+    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(90deg, #e8c96d, rgba(201,160,66,0))' }} />
+    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 28, fontWeight: 300, color: 'rgba(201,160,66,0.2)', marginBottom: 12, lineHeight: 1 }}>
+      {String(index).padStart(2, '0')}
+    </div>
+    <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: isMobile ? 18 : 20, fontWeight: 500, color: '#faf6ef', margin: '0 0 10px', lineHeight: 1.25 }}>{title}</h3>
+    <p style={{ fontSize: 13, color: 'rgba(250,246,239,0.55)', lineHeight: 1.75, margin: 0, fontFamily: 'Outfit, sans-serif', fontWeight: 300 }}>{desc}</p>
+  </motion.div>
+);
+
+const TABS = [
+  { key: 'adult' as const, label: 'Adult Conditions' },
+  { key: 'paediatric' as const, label: 'Paediatric Conditions' },
+];
+
 const ServicesSection = () => {
   const { isMobile, isTablet } = useBreakpoint();
-  const cols = isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)';
+  const [activeTab, setActiveTab] = useState<'adult' | 'paediatric'>('adult');
+  const [direction, setDirection] = useState(1);
+  const [showHint, setShowHint] = useState(true);
   const px = isMobile ? '20px' : '48px';
   const py = isMobile ? '64px' : '120px';
+  const cols = isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)';
+  const items = activeTab === 'adult' ? SERVICES : PEDIATRIC_SERVICES;
+
+  const switchTab = (tab: 'adult' | 'paediatric') => {
+    if (tab === activeTab) return;
+    setDirection(tab === 'paediatric' ? 1 : -1);
+    setActiveTab(tab);
+    setShowHint(false);
+  };
+
+  useEffect(() => {
+    if (!isMobile) return;
+    const t = setTimeout(() => setShowHint(false), 3000);
+    return () => clearTimeout(t);
+  }, [isMobile]);
 
   return (
     <section id="services" style={{ position: 'relative', overflow: 'hidden', padding: `${py} ${px}` }}>
@@ -514,13 +587,12 @@ const ServicesSection = () => {
       </video>
       {/* Dark overlay */}
       <div style={{
-        position: 'absolute',
-        inset: 0,
-        background: 'linear-gradient(180deg, rgba(6,14,9,0.82) 0%, rgba(10,31,19,0.72) 50%, rgba(6,14,9,0.85) 100%)',
+        position: 'absolute', inset: 0,
+        background: 'linear-gradient(180deg, rgba(6,14,9,0.88) 0%, rgba(10,31,19,0.78) 50%, rgba(6,14,9,0.92) 100%)',
         zIndex: 1,
       }} />
-      <div style={{ maxWidth: 1240, margin: '0 auto', position: 'relative', zIndex: 2 }}>
 
+      <div style={{ maxWidth: 1240, margin: '0 auto', position: 'relative', zIndex: 2 }}>
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -530,7 +602,7 @@ const ServicesSection = () => {
           style={{
             display: 'flex', flexDirection: isMobile ? 'column' : 'row',
             justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'flex-end',
-            gap: isMobile ? 20 : 40, marginBottom: isMobile ? 40 : 72,
+            gap: isMobile ? 20 : 40, marginBottom: isMobile ? 36 : 56,
           }}
         >
           <div>
@@ -546,27 +618,93 @@ const ServicesSection = () => {
           </div>
         </motion.div>
 
-        {/* Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: cols, gap: 3 }}>
-          {SERVICES.map((s, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, delay: isMobile ? 0 : i * 0.06 }}
-              viewport={{ once: true }}
-              className="service-card"
-              style={{ padding: isMobile ? '28px 24px' : '40px 36px', background: 'rgba(6,14,9,0.55)', backdropFilter: 'blur(12px)', borderLeft: '2px solid rgba(201,160,66,0.25)', border: '1px solid rgba(201,160,66,0.1)', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}
+        {/* Tab bar */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          viewport={{ once: true }}
+          style={{ display: 'flex', gap: 0, marginBottom: isMobile ? 8 : 12, borderBottom: '1px solid rgba(201,160,66,0.12)' }}
+        >
+          {TABS.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => switchTab(tab.key)}
+              style={{
+                flex: 1,
+                position: 'relative',
+                padding: isMobile ? '14px 12px' : '16px 24px',
+                background: 'transparent',
+                border: 'none',
+                color: activeTab === tab.key ? '#faf6ef' : 'rgba(250,246,239,0.35)',
+                fontFamily: 'Outfit, sans-serif',
+                fontSize: 13,
+                fontWeight: 600,
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                transition: 'color 0.3s',
+              }}
             >
-              <div style={{ fontSize: 20, color: 'rgba(201,160,66,0.7)', marginBottom: 14 }}>{s.icon}</div>
-              <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: isMobile ? 19 : 21, fontWeight: 500, color: '#faf6ef', margin: '0 0 10px', lineHeight: 1.2 }}>{s.title}</h3>
-              <p style={{ fontSize: 13, color: 'rgba(250,246,239,0.65)', lineHeight: 1.75, margin: 0, fontFamily: 'Outfit, sans-serif', fontWeight: 300 }}>{s.desc}</p>
-              <div className="service-arrow" style={{ position: 'absolute', bottom: 20, right: 24, opacity: 0 }}>
-                <ArrowRight size={13} color="#e8c96d" />
-              </div>
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(90deg, #e8c96d, rgba(201,160,66,0))' }} />
-            </motion.div>
+              {tab.label}
+              {activeTab === tab.key && (
+                <motion.div
+                  layoutId="tab-underline"
+                  style={{
+                    position: 'absolute',
+                    bottom: -1,
+                    left: 0,
+                    right: 0,
+                    height: 2,
+                    background: '#c9a042',
+                  }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                />
+              )}
+            </button>
           ))}
+        </motion.div>
+
+        {/* Swipe hint (mobile) */}
+        <AnimatePresence>
+          {isMobile && showHint && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{ textAlign: 'center', padding: '6px 0', fontSize: 11, color: 'rgba(250,246,239,0.25)', fontFamily: 'Outfit, sans-serif', letterSpacing: '0.1em' }}
+            >
+              Swipe to switch
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Panel area */}
+        <div style={{ overflow: 'hidden', marginTop: isMobile ? 20 : 32 }}>
+          <AnimatePresence mode="wait" custom={direction}>
+            <motion.div
+              key={activeTab}
+              custom={direction}
+              initial={{ opacity: 0, x: direction * 80 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: direction * -80 }}
+              transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+              drag={isMobile ? 'x' : false}
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.15}
+              onDragEnd={(_, info) => {
+                if (info.offset.x < -60) switchTab('paediatric');
+                if (info.offset.x > 60) switchTab('adult');
+              }}
+              style={{ touchAction: 'pan-y' }}
+            >
+              <div style={{ display: 'grid', gridTemplateColumns: cols, gap: 3 }}>
+                {items.map((s, i) => (
+                  <ConditionCard key={`${activeTab}-${i}`} title={s.title} desc={s.desc} index={i + 1} isMobile={isMobile} delay={isMobile ? i * 0.03 : i * 0.04} />
+                ))}
+              </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
     </section>
@@ -603,13 +741,13 @@ const PhilosophySection = () => {
         </blockquote>
         {!isMobile && (
           <div style={{ flexShrink: 0, textAlign: 'right' }}>
-            <div style={{ fontSize: 12, color: '#c9a042', letterSpacing: '0.15em', fontFamily: 'Outfit, sans-serif' }}>Dr. Wafaa Ibrahim</div>
+            <div style={{ fontSize: 12, color: '#c9a042', letterSpacing: '0.15em', fontFamily: 'Outfit, sans-serif' }}>Wafaa Ibrahim</div>
             <div style={{ fontSize: 11, color: 'rgba(250,246,239,0.35)', letterSpacing: '0.1em', fontFamily: 'Outfit, sans-serif', marginTop: 4 }}>Founder & Lead Physiotherapist</div>
           </div>
         )}
         {isMobile && (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 12, color: '#c9a042', letterSpacing: '0.15em', fontFamily: 'Outfit, sans-serif' }}>Dr. Wafaa Ibrahim</div>
+            <div style={{ fontSize: 12, color: '#c9a042', letterSpacing: '0.15em', fontFamily: 'Outfit, sans-serif' }}>Wafaa Ibrahim</div>
             <div style={{ fontSize: 11, color: 'rgba(250,246,239,0.35)', letterSpacing: '0.1em', fontFamily: 'Outfit, sans-serif', marginTop: 4 }}>Founder & Lead Physiotherapist</div>
           </div>
         )}
@@ -646,7 +784,7 @@ const AboutSection = () => {
           style={{ position: 'relative', maxWidth: isMobile ? 320 : 'none', margin: isMobile ? '0 auto' : 0 }}
         >
           <div style={{ aspectRatio: '3/4', position: 'relative', overflow: 'hidden' }}>
-            <img src="/dr-wafaa.webp" alt="Dr. Wafaa Ibrahim" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+            <img src="/dr-wafaa.webp" alt="Wafaa Ibrahim" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
             <div style={{ position: 'absolute', top: -1, right: -1, width: 44, height: 44, borderTop: '2px solid #c9a042', borderRight: '2px solid #c9a042' }} />
             <div style={{ position: 'absolute', bottom: -1, left: -1, width: 44, height: 44, borderBottom: '2px solid #c9a042', borderLeft: '2px solid #c9a042' }} />
           </div>
@@ -686,7 +824,7 @@ const AboutSection = () => {
           </h2>
           <div style={{ width: 44, height: 1, background: '#c9a042', marginBottom: 24 }} />
           <p style={{ fontSize: 14, lineHeight: 1.9, color: '#3d5a50', fontFamily: 'Outfit, sans-serif', fontWeight: 300, marginBottom: 32 }}>
-            Dr. Wafaa Ibrahim is a Chartered Physiotherapist with over 20 years of experience as a Musculoskeletal specialist within the NHS. Holding both a Doctor of Physiotherapy and a Master's degree from Coventry University, she brings world-class clinical expertise to every patient encounter.
+            Wafaa Ibrahim is a Chartered Physiotherapist with over 20 years of experience as a Musculoskeletal specialist. Holding both a Doctor of Physiotherapy and a Master's degree from Coventry University, she brings world-class clinical expertise to every patient encounter.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 36 }}>
@@ -801,20 +939,6 @@ const ClinicGallerySection = () => {
                 loading="lazy"
                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
-              {/* Caption overlay */}
-              <div style={{
-                position: 'absolute', bottom: 0, left: 0, right: 0,
-                padding: '20px 12px 8px',
-                background: 'linear-gradient(to top, rgba(10,31,19,0.8), transparent)',
-              }}>
-                <span style={{
-                  fontSize: 10, color: 'rgba(201,160,66,0.75)',
-                  letterSpacing: '0.2em', textTransform: 'uppercase',
-                  fontFamily: 'Outfit, sans-serif', fontWeight: 500,
-                }}>
-                  {img.label}
-                </span>
-              </div>
             </div>
           ))}
         </div>
@@ -834,7 +958,7 @@ const WhySection = () => {
   const py = isMobile ? '64px' : '120px';
 
   const pillars = [
-    { icon: Shield, title: 'NHS-Trained Expertise', desc: 'Over two decades within the National Health Service — clinical precision you can trust.' },
+    { icon: Shield, title: 'NHS-Trained Expertise', desc: 'Over five years within the National Health Service — clinical precision you can trust.' },
     { icon: Heart, title: 'Truly Personal Care', desc: 'No generic protocols. Every plan is crafted around your specific condition and goals.' },
     { icon: Award, title: 'Recognised Qualifications', desc: 'DPT-qualified, MCSP registered, and accepted by 9 major insurance providers.' },
     { icon: Star, title: 'Flexible Hours', desc: 'Evening and Saturday appointments — because your recovery shouldn\'t wait.' },
@@ -1002,8 +1126,9 @@ const ContactSection = () => {
 
   const details = [
     { icon: MapPin, label: 'Location', value: 'Mare Fair, Sol Central\nGround Floor, Unit 3\nNorthampton NN1 1SR' },
-    { icon: Phone, label: 'Phone', value: '+44 333 577 9553' },
-    { icon: Mail, label: 'Email', value: 'elitephysioclinics@gmail.com' },
+    { icon: Phone, label: 'Phone', value: '+44 333 577 9553', href: 'tel:+443335779553' },
+    { icon: MessageCircle, label: 'WhatsApp', value: '+44 7405 825954', href: WHATSAPP_URL },
+    { icon: Mail, label: 'Email', value: 'elitephysioclinics@gmail.com', href: 'mailto:elitephysioclinics@gmail.com' },
     { icon: Clock, label: 'Hours', value: formatHoursDisplay() },
   ];
 
@@ -1028,7 +1153,7 @@ const ContactSection = () => {
             </h2>
             {!isMobile && (
               <div style={{ maxWidth: 360, fontSize: 14, color: 'rgba(250,246,239,0.45)', fontFamily: 'Outfit, sans-serif', fontWeight: 300, lineHeight: 1.8 }}>
-                Ready to take the first step? Reach out to book your initial assessment with Dr. Ibrahim.
+                Ready to take the first step? Reach out to book your initial assessment with Wafaa Ibrahim.
               </div>
             )}
           </div>
@@ -1044,24 +1169,45 @@ const ContactSection = () => {
             viewport={{ once: true }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 24 : 32 }}>
-              {details.map(({ icon: Icon, label, value }, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 14 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.08 * i, duration: 0.5 }}
-                  viewport={{ once: true }}
-                  style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}
-                >
-                  <div style={{ width: 40, height: 40, border: '1px solid rgba(201,160,66,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Icon size={14} color="#c9a042" />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 10, color: 'rgba(201,160,66,0.55)', letterSpacing: '0.25em', textTransform: 'uppercase', fontFamily: 'Outfit, sans-serif', marginBottom: 4 }}>{label}</div>
-                    <div style={{ fontSize: 13, color: 'rgba(250,246,239,0.72)', fontFamily: 'Outfit, sans-serif', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{value}</div>
-                  </div>
-                </motion.div>
-              ))}
+              {details.map(({ icon: Icon, label, value, href }, i) => {
+                const content = (
+                  <>
+                    <div style={{ width: 40, height: 40, border: '1px solid rgba(201,160,66,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'border-color 0.2s' }}>
+                      <Icon size={14} color="#c9a042" />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: 'rgba(201,160,66,0.55)', letterSpacing: '0.25em', textTransform: 'uppercase', fontFamily: 'Outfit, sans-serif', marginBottom: 4 }}>{label}</div>
+                      <div style={{ fontSize: 13, color: 'rgba(250,246,239,0.72)', fontFamily: 'Outfit, sans-serif', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{value}</div>
+                    </div>
+                  </>
+                );
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 14 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.08 * i, duration: 0.5 }}
+                    viewport={{ once: true }}
+                  >
+                    {href ? (
+                      <a
+                        href={href}
+                        target={label === 'WhatsApp' ? '_blank' : undefined}
+                        rel={label === 'WhatsApp' ? 'noopener noreferrer' : undefined}
+                        style={{ display: 'flex', gap: 16, alignItems: 'flex-start', textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}
+                        onMouseEnter={e => { e.currentTarget.style.opacity = '0.8'; const box = e.currentTarget.querySelector('div') as HTMLElement; if (box) box.style.borderColor = 'rgba(201,160,66,0.5)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.opacity = '1'; const box = e.currentTarget.querySelector('div') as HTMLElement; if (box) box.style.borderColor = 'rgba(201,160,66,0.2)'; }}
+                      >
+                        {content}
+                      </a>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+                        {content}
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
             </div>
 
             {/* Google Map */}
@@ -1174,6 +1320,45 @@ const Footer = () => {
 };
 
 // ─────────────────────────────────────────────
+// WHATSAPP FLOATING BUTTON
+// ─────────────────────────────────────────────
+
+const WhatsAppButton = () => (
+  <motion.a
+    href={WHATSAPP_URL}
+    target="_blank"
+    rel="noopener noreferrer"
+    title="Chat on WhatsApp"
+    initial={{ scale: 0, opacity: 0 }}
+    animate={{ scale: 1, opacity: 1 }}
+    transition={{ delay: 1.5, duration: 0.4, type: 'spring', stiffness: 260, damping: 20 }}
+    whileHover={{ scale: 1.1 }}
+    whileTap={{ scale: 0.95 }}
+    className="whatsapp-float"
+    style={{
+      position: 'fixed',
+      bottom: 24,
+      right: 24,
+      width: 56,
+      height: 56,
+      borderRadius: '50%',
+      background: '#25D366',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      boxShadow: '0 4px 14px rgba(37,211,102,0.4)',
+      zIndex: 9999,
+      cursor: 'pointer',
+      textDecoration: 'none',
+    }}
+  >
+    <svg viewBox="0 0 24 24" width="28" height="28" fill="white">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+  </motion.a>
+);
+
+// ─────────────────────────────────────────────
 // APP
 // ─────────────────────────────────────────────
 
@@ -1191,6 +1376,7 @@ function Website() {
       <InsuranceSection />
       <ContactSection />
       <Footer />
+      <WhatsAppButton />
     </div>
   );
 }

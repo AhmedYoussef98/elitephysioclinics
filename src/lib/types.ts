@@ -2,6 +2,7 @@ export interface Condition {
   slug: string;
   title: string;
   description: string;
+  category?: 'adult' | 'paediatric';
 }
 
 export interface TimeSlot {
