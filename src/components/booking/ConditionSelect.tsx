@@ -76,7 +76,7 @@ export const ConditionSelect: React.FC<ConditionSelectProps> = ({ value, onChang
               </option>
             ))}
           </optgroup>
-          <optgroup label="Paediatric Conditions" style={{ background: '#0a1f13', color: '#c9a042', fontWeight: 600 }}>
+          <optgroup label="Children's Conditions" style={{ background: '#0a1f13', color: '#c9a042', fontWeight: 600 }}>
             {CONDITIONS.filter(c => c.category === 'paediatric').map(c => (
               <option key={c.slug} value={c.slug} style={{ background: '#0a1f13', color: '#faf6ef', fontWeight: 400 }}>
                 {c.title}

@@ -75,7 +75,7 @@ const CREDENTIALS = [
   { label: 'Chartered Physiotherapist (MCSP)', highlight: false },
   { label: '20+ Years Musculoskeletal Specialist', highlight: true },
   { label: 'Post-Graduate Musculoskeletal Training', highlight: false },
-  { label: 'Specialist — Paediatric Physiotherapy', highlight: false },
+  { label: "Specialist — Children's Physiotherapy", highlight: false },
 ];
 
 const NAV_LINKS = ['Services', 'About', 'Insurance', 'Contact'];
@@ -540,7 +540,7 @@ const ConditionCard = ({ title, desc, index, isMobile, delay }: { title: string;
 
 const TABS = [
   { key: 'adult' as const, label: 'Adult Conditions' },
-  { key: 'paediatric' as const, label: 'Paediatric Conditions' },
+  { key: 'paediatric' as const, label: "Children's Conditions" },
 ];
 
 const ServicesSection = () => {
