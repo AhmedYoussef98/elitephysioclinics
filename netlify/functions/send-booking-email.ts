@@ -168,8 +168,10 @@ const handler: Handler = async (event) => {
   ]);
 
   const failures = results.filter((r) => r.status === 'rejected');
+  const errorMessages = failures.map((r) => r.status === 'rejected' ? String(r.reason) : '');
+
   if (failures.length > 0) {
-    console.error('Email failures:', failures);
+    console.error('Email failures:', errorMessages);
   }
 
   return {
@@ -178,6 +180,7 @@ const handler: Handler = async (event) => {
       success: failures.length === 0,
       sent: results.length - failures.length,
       failed: failures.length,
+      errors: errorMessages,
     }),
   };
 };
