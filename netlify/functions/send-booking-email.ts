@@ -135,6 +135,10 @@ const handler: Handler = async (event) => {
     return { statusCode: 500, body: JSON.stringify({ error: 'Email not configured' }) };
   }
 
+  // Temporary debug: log credential shape (not values) to diagnose auth issue
+  console.log(`GMAIL_USER length: ${GMAIL_USER.length}, value starts with: ${GMAIL_USER.slice(0, 5)}`);
+  console.log(`GMAIL_APP_PASSWORD length: ${GMAIL_APP_PASSWORD.length}, has spaces: ${GMAIL_APP_PASSWORD.includes(' ')}`);
+
   let booking: BookingPayload;
   try {
     booking = JSON.parse(event.body ?? '');
