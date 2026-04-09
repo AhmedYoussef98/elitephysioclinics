@@ -90,6 +90,22 @@ export const BookingForm: React.FC<BookingFormProps> = ({ isMobile }) => {
       } else {
         const response = data as BookAppointmentResponse;
         if (response.success && response.data) {
+          // Send email notifications (fire-and-forget — don't block the confirmation)
+          fetch('/.netlify/functions/send-booking-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              patient_name: response.data.patientName,
+              patient_phone: response.data.patientPhone,
+              patient_email: response.data.patientEmail,
+              condition_title: response.data.conditionTitle,
+              date: response.data.date,
+              start_time: response.data.startTime,
+              end_time: response.data.endTime,
+              booking_reference: response.data.bookingReference,
+            }),
+          }).catch(() => {});
+
           setBooking({
             id: response.data.id,
             patientName: response.data.patientName,
