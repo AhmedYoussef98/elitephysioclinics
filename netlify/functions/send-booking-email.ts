@@ -1,5 +1,4 @@
 import type { Handler } from '@netlify/functions';
-import nodemailer from 'nodemailer';
 
 interface BookingPayload {
   patient_name: string;
@@ -12,8 +11,9 @@ interface BookingPayload {
   booking_reference: string;
 }
 
-const GMAIL_USER = process.env.GMAIL_USER ?? '';
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD ?? '';
+const RESEND_API_KEY = process.env.RESEND_API_KEY ?? '';
+const CLINIC_EMAIL = 'elitephysioclinics@gmail.com';
+const FROM_EMAIL = 'Elite Physio Clinics <onboarding@resend.dev>';
 
 const CLINIC_INFO = {
   name: 'Elite Physio Clinics',
@@ -123,6 +123,23 @@ function patientEmailHtml(r: BookingPayload): string {
 </body></html>`;
 }
 
+// --- Resend sender ---
+
+async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ from: FROM_EMAIL, to, subject, html }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Resend ${res.status}: ${body}`);
+  }
+}
+
 // --- Handler ---
 
 const handler: Handler = async (event) => {
@@ -130,14 +147,10 @@ const handler: Handler = async (event) => {
     return { statusCode: 405, body: 'Method not allowed' };
   }
 
-  if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
-    console.error('Missing GMAIL_USER or GMAIL_APP_PASSWORD environment variables');
+  if (!RESEND_API_KEY) {
+    console.error('Missing RESEND_API_KEY environment variable');
     return { statusCode: 500, body: JSON.stringify({ error: 'Email not configured' }) };
   }
-
-  // Temporary debug: log credential shape (not values) to diagnose auth issue
-  console.log(`GMAIL_USER length: ${GMAIL_USER.length}, value starts with: ${GMAIL_USER.slice(0, 5)}`);
-  console.log(`GMAIL_APP_PASSWORD length: ${GMAIL_APP_PASSWORD.length}, has spaces: ${GMAIL_APP_PASSWORD.includes(' ')}`);
 
   let booking: BookingPayload;
   try {
@@ -146,29 +159,17 @@ const handler: Handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) };
   }
 
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    auth: {
-      user: GMAIL_USER,
-      pass: GMAIL_APP_PASSWORD,
-    },
-  });
-
   const results = await Promise.allSettled([
-    transporter.sendMail({
-      from: `"Elite Physio Clinics" <${GMAIL_USER}>`,
-      to: GMAIL_USER,
-      subject: `New booking: ${booking.patient_name} — ${formatDate(booking.date)} ${formatTime(booking.start_time)}`,
-      html: clinicEmailHtml(booking),
-    }),
-    transporter.sendMail({
-      from: `"Elite Physio Clinics" <${GMAIL_USER}>`,
-      to: booking.patient_email,
-      subject: `Your appointment at Elite Physio Clinics — ${formatDate(booking.date)}`,
-      html: patientEmailHtml(booking),
-    }),
+    sendEmail(
+      CLINIC_EMAIL,
+      `New booking: ${booking.patient_name} — ${formatDate(booking.date)} ${formatTime(booking.start_time)}`,
+      clinicEmailHtml(booking),
+    ),
+    sendEmail(
+      booking.patient_email,
+      `Your appointment at Elite Physio Clinics — ${formatDate(booking.date)}`,
+      patientEmailHtml(booking),
+    ),
   ]);
 
   const failures = results.filter((r) => r.status === 'rejected');
