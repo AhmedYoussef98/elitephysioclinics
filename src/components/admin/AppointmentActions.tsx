@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../lib/supabase';
+import { useClinicHours } from '../../context/ClinicHoursContext';
+import { generateSlotStartTimes } from '../../lib/slots';
+import { formatTime12h } from '../../lib/format';
 import { XCircle, CheckCircle, RefreshCw, MoreHorizontal, X, Trash2, RotateCcw } from 'lucide-react';
 
 interface Appointment {
@@ -21,6 +24,7 @@ interface AppointmentActionsProps {
 }
 
 export const AppointmentActions: React.FC<AppointmentActionsProps> = ({ appointment, onUpdate }) => {
+  const { hours: clinicHours } = useClinicHours();
   const [showMenu, setShowMenu] = useState(false);
   const [showReschedule, setShowReschedule] = useState(false);
   const [newDate, setNewDate] = useState('');
@@ -71,42 +75,39 @@ export const AppointmentActions: React.FC<AppointmentActionsProps> = ({ appointm
   const status = appointment.status;
   const isConfirmed = status === 'confirmed';
 
+  // Grid-aligned time options for the chosen reschedule date (respects clinic hours).
+  const rescheduleTimes = (() => {
+    if (!newDate) return [];
+    const dayName = new Date(`${newDate}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' });
+    const hours = clinicHours[dayName];
+    return hours ? generateSlotStartTimes(hours) : [];
+  })();
+
+  // Shared status-mutation for the simple actions (complete / reconfirm / cancel).
+  const updateStatus = async (
+    status: 'confirmed' | 'completed' | 'cancelled',
+    loadingKey: string,
+    errorMsg: string,
+  ) => {
+    setActionLoading(loadingKey);
+    setError('');
+    const { error: err } = await supabase
+      .from('appointments')
+      .update({ status })
+      .eq('id', appointment.id);
+    if (err) setError(errorMsg);
+    else { onUpdate(); closeMenu(); }
+    setActionLoading('');
+  };
+
   const handleCancel = async () => {
     if (!confirm(`Cancel appointment for ${appointment.patient_name}?`)) return;
-    setActionLoading('cancel');
-    setError('');
-    const { error: err } = await supabase
-      .from('appointments')
-      .update({ status: 'cancelled' })
-      .eq('id', appointment.id);
-    if (err) setError('Failed to cancel');
-    else { onUpdate(); closeMenu(); }
-    setActionLoading('');
+    await updateStatus('cancelled', 'cancel', 'Failed to cancel');
   };
 
-  const handleComplete = async () => {
-    setActionLoading('complete');
-    setError('');
-    const { error: err } = await supabase
-      .from('appointments')
-      .update({ status: 'completed' })
-      .eq('id', appointment.id);
-    if (err) setError('Failed to complete');
-    else { onUpdate(); closeMenu(); }
-    setActionLoading('');
-  };
+  const handleComplete = () => updateStatus('completed', 'complete', 'Failed to complete');
 
-  const handleReconfirm = async () => {
-    setActionLoading('reconfirm');
-    setError('');
-    const { error: err } = await supabase
-      .from('appointments')
-      .update({ status: 'confirmed' })
-      .eq('id', appointment.id);
-    if (err) setError('Failed to reconfirm');
-    else { onUpdate(); closeMenu(); }
-    setActionLoading('');
-  };
+  const handleReconfirm = () => updateStatus('confirmed', 'reconfirm', 'Failed to reconfirm');
 
   const handleDelete = async () => {
     if (!confirm(`Permanently delete appointment for ${appointment.patient_name}? This cannot be undone.`)) return;
@@ -126,14 +127,9 @@ export const AppointmentActions: React.FC<AppointmentActionsProps> = ({ appointm
     setActionLoading('reschedule');
     setError('');
 
-    const { error: updateErr } = await supabase
-      .from('appointments')
-      .update({ status: 'rescheduled' })
-      .eq('id', appointment.id);
-
-    if (updateErr) { setError('Failed to reschedule'); setActionLoading(''); return; }
-
-    const { data } = await supabase.rpc('book_appointment', {
+    // Create the new appointment FIRST. Only release the original slot once the
+    // new booking has succeeded, so a failed booking never orphans the appointment.
+    const { data, error: bookErr } = await supabase.rpc('book_appointment', {
       p_patient_name: appointment.patient_name,
       p_patient_phone: appointment.patient_phone,
       p_patient_email: appointment.patient_email,
@@ -143,14 +139,29 @@ export const AppointmentActions: React.FC<AppointmentActionsProps> = ({ appointm
       p_start_time: newTime,
     });
 
-    const result = data as any;
-    if (result && !result.success) {
-      await supabase.from('appointments').update({ status: 'confirmed' }).eq('id', appointment.id);
-      setError(result.error || 'Slot unavailable');
+    const result = data as { success: boolean; error?: string } | null;
+    if (bookErr || !result) {
+      setError('Failed to reschedule. Please try again.');
+      setActionLoading('');
+      return;
+    }
+    if (!result.success) {
+      setError(result.error || 'That slot is unavailable.');
+      setActionLoading('');
+      return;
+    }
+
+    // New appointment created — mark the original as rescheduled (frees its slot).
+    const { error: updateErr } = await supabase
+      .from('appointments')
+      .update({ status: 'rescheduled' })
+      .eq('id', appointment.id);
+    if (updateErr) {
+      setError('Rescheduled, but the original could not be updated. Please refresh.');
     } else {
       closeMenu();
-      onUpdate();
     }
+    onUpdate();
     setActionLoading('');
   };
 
@@ -205,8 +216,17 @@ export const AppointmentActions: React.FC<AppointmentActionsProps> = ({ appointm
                   <span>Reschedule to:</span>
                   <button onClick={() => setShowReschedule(false)} className="actions-reschedule-close"><X size={14} /></button>
                 </div>
-                <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} />
-                <input type="time" value={newTime} onChange={e => setNewTime(e.target.value)} step="1800" />
+                <input type="date" value={newDate} onChange={e => { setNewDate(e.target.value); setNewTime(''); }} />
+                <select
+                  value={newTime}
+                  onChange={e => setNewTime(e.target.value)}
+                  disabled={!newDate || rescheduleTimes.length === 0}
+                >
+                  <option value="">
+                    {!newDate ? 'Select date first' : rescheduleTimes.length === 0 ? 'Closed on this day' : 'Select time...'}
+                  </option>
+                  {rescheduleTimes.map(t => <option key={t} value={t}>{formatTime12h(t)}</option>)}
+                </select>
                 <button onClick={handleReschedule} disabled={!!actionLoading} className="admin-btn-gold actions-confirm-btn">
                   {actionLoading === 'reschedule' ? 'Saving...' : 'Confirm Reschedule'}
                 </button>

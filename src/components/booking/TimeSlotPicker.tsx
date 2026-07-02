@@ -4,19 +4,14 @@ import { supabase } from '../../lib/supabase';
 import { useClinicHours } from '../../context/ClinicHoursContext';
 import type { TimeSlot, UnavailableSlot } from '../../lib/types';
 import { SLOT_DURATION_MINUTES } from '../../lib/constants';
+import { generateSlotStartTimes, addMinutes } from '../../lib/slots';
+import { formatTime12h } from '../../lib/format';
 
 interface TimeSlotPickerProps {
   date: string;
   selectedTime: string;
   onSelect: (time: string) => void;
   isMobile: boolean;
-}
-
-function formatTime12h(time24: string): string {
-  const [h, m] = time24.split(':').map(Number);
-  const period = h >= 12 ? 'PM' : 'AM';
-  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return `${h12}:${String(m).padStart(2, '0')} ${period}`;
 }
 
 function getDayName(dateStr: string): string {
@@ -28,28 +23,13 @@ export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({ date, selectedTi
   const { hours: clinicHours } = useClinicHours();
 
   function generateSlots(dateStr: string): TimeSlot[] {
-    const dayName = getDayName(dateStr);
-    const hours = clinicHours[dayName];
+    const hours = clinicHours[getDayName(dateStr)];
     if (!hours) return [];
-
-    const slots: TimeSlot[] = [];
-    const [startH, startM] = hours.start.split(':').map(Number);
-    const [endH, endM] = hours.end.split(':').map(Number);
-    const startMin = startH * 60 + startM;
-    const endMin = endH * 60 + endM;
-
-    for (let min = startMin; min + SLOT_DURATION_MINUTES <= endMin; min += SLOT_DURATION_MINUTES) {
-      const sh = Math.floor(min / 60);
-      const sm = min % 60;
-      const eh = Math.floor((min + SLOT_DURATION_MINUTES) / 60);
-      const em = (min + SLOT_DURATION_MINUTES) % 60;
-      slots.push({
-        startTime: `${String(sh).padStart(2, '0')}:${String(sm).padStart(2, '0')}`,
-        endTime: `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`,
-        available: true,
-      });
-    }
-    return slots;
+    return generateSlotStartTimes(hours).map(startTime => ({
+      startTime,
+      endTime: addMinutes(startTime, SLOT_DURATION_MINUTES),
+      available: true,
+    }));
   }
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(false);
@@ -61,6 +41,7 @@ export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({ date, selectedTi
       return;
     }
 
+    let cancelled = false;
     setLoading(true);
     setError('');
 
@@ -69,6 +50,7 @@ export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({ date, selectedTi
     (async () => {
       try {
         const { data, error: rpcError } = await supabase.rpc('get_unavailable_slots', { booking_date: date });
+        if (cancelled) return;
 
         if (rpcError) {
           setError('Unable to check availability. Please try again or contact us directly.');
@@ -79,19 +61,24 @@ export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({ date, selectedTi
         const unavailable = (data as UnavailableSlot[]) || [];
         const unavailableTimes = new Set(unavailable.map(s => s.start_time.substring(0, 5)));
 
-        const merged = allSlots.map(slot => ({
+        setSlots(allSlots.map(slot => ({
           ...slot,
           available: !unavailableTimes.has(slot.startTime),
-        }));
-        setSlots(merged);
+        })));
       } catch {
-        setError('Unable to check availability. Please try again or contact us directly.');
-        setSlots(allSlots);
+        if (!cancelled) {
+          setError('Unable to check availability. Please try again or contact us directly.');
+          setSlots(allSlots);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
-  }, [date]);
+
+    return () => { cancelled = true; };
+    // Re-run when the date changes OR when clinic hours load/update (avoids stale slots).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date, clinicHours]);
 
   if (!date) return null;
 

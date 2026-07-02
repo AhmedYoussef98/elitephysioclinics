@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { supabase } from '../../lib/supabase';
-import { CONDITIONS, SLOT_DURATION_MINUTES } from '../../lib/constants';
+import { CONDITIONS } from '../../lib/constants';
+import { generateSlotStartTimes } from '../../lib/slots';
+import { formatTime12h } from '../../lib/format';
 import { useClinicHours } from '../../context/ClinicHoursContext';
 import { patientSchema } from '../../lib/validation';
 import type { BookAppointmentResponse } from '../../lib/types';
@@ -23,29 +25,9 @@ export const CreateAppointment: React.FC = () => {
 
   const getTimeOptions = () => {
     if (!date) return [];
-    const d = new Date(date + 'T00:00:00');
-    const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
+    const dayName = new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' });
     const hours = clinicHours[dayName];
-    if (!hours) return [];
-
-    const options: string[] = [];
-    const [sh, sm] = hours.start.split(':').map(Number);
-    const [eh, em] = hours.end.split(':').map(Number);
-    const startMin = sh * 60 + sm;
-    const endMin = eh * 60 + em;
-
-    for (let min = startMin; min + SLOT_DURATION_MINUTES <= endMin; min += SLOT_DURATION_MINUTES) {
-      const h = Math.floor(min / 60);
-      const m = min % 60;
-      options.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-    }
-    return options;
-  };
-
-  const formatTimeLabel = (t: string) => {
-    const [h, m] = t.split(':').map(Number);
-    const p = h >= 12 ? 'PM' : 'AM';
-    return `${h === 0 ? 12 : h > 12 ? h - 12 : h}:${String(m).padStart(2, '0')} ${p}`;
+    return hours ? generateSlotStartTimes(hours) : [];
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -159,7 +141,7 @@ export const CreateAppointment: React.FC = () => {
               <label><Clock size={13} /> Time Slot</label>
               <select value={time} onChange={e => setTime(e.target.value)} disabled={!date || timeOptions.length === 0}>
                 <option value="">{!date ? 'Select date first' : timeOptions.length === 0 ? 'Closed on this day' : 'Select time...'}</option>
-                {timeOptions.map(t => <option key={t} value={t}>{formatTimeLabel(t)}</option>)}
+                {timeOptions.map(t => <option key={t} value={t}>{formatTime12h(t)}</option>)}
               </select>
               {errors.time && <span className="create-field-error">{errors.time}</span>}
             </div>

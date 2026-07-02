@@ -32,6 +32,13 @@ export const CONDITIONS: Condition[] = [
 
 export const CONDITION_SLUGS = CONDITIONS.map(c => c.slug);
 
+// Single source of truth for day-of-week ordering/casing. The clinic-hours map is
+// keyed by these exact names (matching toLocaleDateString('en-US', { weekday: 'long' })),
+// so every consumer must derive its day list from here rather than re-listing it.
+export const DAYS_OF_WEEK = [
+  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+] as const;
+
 export const CLINIC_HOURS: Record<string, ClinicHours | null> = {
   Monday: { start: '16:30', end: '21:00' },
   Tuesday: { start: '16:30', end: '21:00' },
@@ -41,6 +48,9 @@ export const CLINIC_HOURS: Record<string, ClinicHours | null> = {
   Saturday: { start: '08:00', end: '21:00' },
   Sunday: null,
 };
+
+// Hours prefilled when an admin toggles a previously-closed day back open.
+export const FALLBACK_OPEN_HOURS: ClinicHours = { start: '09:00', end: '17:00' };
 
 export const SLOT_DURATION_MINUTES = 30;
 export const BOOKING_WINDOW_WEEKS = 4;

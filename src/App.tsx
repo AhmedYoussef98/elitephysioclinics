@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import { BookingForm } from './components/booking/BookingForm';
 import { useClinicHours } from './context/ClinicHoursContext';
+import { DAYS_OF_WEEK } from './lib/constants';
+import { formatTime12h } from './lib/format';
 import { LoginForm } from './components/admin/LoginForm';
 import { ProtectedRoute } from './components/admin/ProtectedRoute';
 import { AdminLayout } from './components/admin/AdminLayout';
@@ -1099,26 +1101,22 @@ const ContactSection = () => {
   const py = isMobile ? '64px' : '120px';
 
   const formatHoursDisplay = () => {
-    const fmt = (t: string) => {
-      const [h, m] = t.split(':').map(Number);
-      const p = h >= 12 ? 'PM' : 'AM';
-      return `${h === 0 ? 12 : h > 12 ? h - 12 : h}:${String(m).padStart(2, '0')} ${p}`;
-    };
     const lines: string[] = [];
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     // Group consecutive days with same hours
     let i = 0;
-    while (i < days.length) {
-      const h = clinicHours[days[i]];
+    while (i < DAYS_OF_WEEK.length) {
+      const h = clinicHours[DAYS_OF_WEEK[i]];
       if (!h) { i++; continue; }
       let j = i;
-      while (j + 1 < days.length) {
-        const next = clinicHours[days[j + 1]];
+      while (j + 1 < DAYS_OF_WEEK.length) {
+        const next = clinicHours[DAYS_OF_WEEK[j + 1]];
         if (next && next.start === h.start && next.end === h.end) j++;
         else break;
       }
-      const label = i === j ? days[i].substring(0, 3) : `${days[i].substring(0, 3)} – ${days[j].substring(0, 3)}`;
-      lines.push(`${label} · ${fmt(h.start)} – ${fmt(h.end)}`);
+      const label = i === j
+        ? DAYS_OF_WEEK[i].substring(0, 3)
+        : `${DAYS_OF_WEEK[i].substring(0, 3)} – ${DAYS_OF_WEEK[j].substring(0, 3)}`;
+      lines.push(`${label} · ${formatTime12h(h.start)} – ${formatTime12h(h.end)}`);
       i = j + 1;
     }
     return lines.join('\n') || 'Contact us for hours';

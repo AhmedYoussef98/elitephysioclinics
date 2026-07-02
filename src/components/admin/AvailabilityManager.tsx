@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Trash2, Plus, CalendarOff, Clock, ShieldOff } from 'lucide-react';
 import { SLOT_DURATION_MINUTES } from '../../lib/constants';
+import { generateSlotStartTimes, addMinutes } from '../../lib/slots';
+import { formatTime12h, formatDate } from '../../lib/format';
 import { useClinicHours } from '../../context/ClinicHoursContext';
 
 interface BlockedPeriod {
@@ -75,25 +77,15 @@ export const AvailabilityManager: React.FC = () => {
 
   const getTimeOptions = () => {
     if (!slotDate) return [];
-    const d = new Date(slotDate + 'T00:00:00');
-    const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
+    const dayName = new Date(slotDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' });
     const hours = clinicHours[dayName];
-    if (!hours) return [];
-    const options: string[] = [];
-    const [sh, sm] = hours.start.split(':').map(Number);
-    const [eh, em] = hours.end.split(':').map(Number);
-    for (let min = sh * 60 + sm; min + SLOT_DURATION_MINUTES <= eh * 60 + em; min += SLOT_DURATION_MINUTES) {
-      options.push(`${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`);
-    }
-    return options;
+    return hours ? generateSlotStartTimes(hours) : [];
   };
 
   const addSlot = async () => {
     setError('');
     if (!slotDate || !slotTime) { setError('Select date and time'); return; }
-    const [h, m] = slotTime.split(':').map(Number);
-    const endMin = h * 60 + m + SLOT_DURATION_MINUTES;
-    const endTime = `${String(Math.floor(endMin / 60)).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}`;
+    const endTime = addMinutes(slotTime, SLOT_DURATION_MINUTES);
     const { error: err } = await supabase.from('blocked_slots').insert({
       date: slotDate, start_time: slotTime, end_time: endTime, reason: slotReason || null,
     });
@@ -106,16 +98,6 @@ export const AvailabilityManager: React.FC = () => {
     await supabase.from('blocked_slots').delete().eq('id', id);
     fetchSlots();
     flash('Slot unblocked');
-  };
-
-  const formatDate = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', {
-    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
-  });
-
-  const formatTime = (t: string) => {
-    const [h, m] = t.split(':').map(Number);
-    const p = h >= 12 ? 'PM' : 'AM';
-    return `${h === 0 ? 12 : h > 12 ? h - 12 : h}:${String(m).padStart(2, '0')} ${p}`;
   };
 
   const daysDiff = (s: string, e: string) => {
@@ -197,7 +179,7 @@ export const AvailabilityManager: React.FC = () => {
                 <label>Time Slot</label>
                 <select value={slotTime} onChange={e => setSlotTime(e.target.value)} disabled={!slotDate}>
                   <option value="">{!slotDate ? 'Select date first' : 'Select time...'}</option>
-                  {getTimeOptions().map(t => <option key={t} value={t}>{formatTime(t)}</option>)}
+                  {getTimeOptions().map(t => <option key={t} value={t}>{formatTime12h(t)}</option>)}
                 </select>
               </div>
             </div>
@@ -216,8 +198,8 @@ export const AvailabilityManager: React.FC = () => {
             ) : slots.map(s => (
               <div key={s.id} className="avail-item">
                 <div className="avail-item-info">
-                  <span className="avail-item-dates">{formatDate(s.date)} at {formatTime(s.start_time)}</span>
-                  <span className="avail-item-meta">{formatTime(s.start_time)} — {formatTime(s.end_time)}{s.reason ? ` · ${s.reason}` : ''}</span>
+                  <span className="avail-item-dates">{formatDate(s.date)} at {formatTime12h(s.start_time)}</span>
+                  <span className="avail-item-meta">{formatTime12h(s.start_time)} — {formatTime12h(s.end_time)}{s.reason ? ` · ${s.reason}` : ''}</span>
                 </div>
                 <button onClick={() => deleteSlot(s.id)} className="avail-delete" title="Remove"><Trash2 size={14} /></button>
               </div>

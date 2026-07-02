@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useClinicHours } from '../../context/ClinicHoursContext';
+import { CLINIC_HOURS, DAYS_OF_WEEK, FALLBACK_OPEN_HOURS } from '../../lib/constants';
+import { formatTime12h } from '../../lib/format';
 import { Clock, Save, RotateCcw } from 'lucide-react';
 
 interface DaySettings {
@@ -10,17 +12,16 @@ interface DaySettings {
   end_time: string | null;
 }
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-
-const DEFAULTS: DaySettings[] = [
-  { day_of_week: 'Monday', is_open: true, start_time: '16:30', end_time: '21:00' },
-  { day_of_week: 'Tuesday', is_open: true, start_time: '16:30', end_time: '21:00' },
-  { day_of_week: 'Wednesday', is_open: true, start_time: '16:30', end_time: '21:00' },
-  { day_of_week: 'Thursday', is_open: true, start_time: '16:30', end_time: '21:00' },
-  { day_of_week: 'Friday', is_open: true, start_time: '16:30', end_time: '21:00' },
-  { day_of_week: 'Saturday', is_open: true, start_time: '08:00', end_time: '21:00' },
-  { day_of_week: 'Sunday', is_open: false, start_time: null, end_time: null },
-];
+// Derived from the single CLINIC_HOURS source of truth so defaults never drift.
+const DEFAULTS: DaySettings[] = DAYS_OF_WEEK.map(day => {
+  const h = CLINIC_HOURS[day];
+  return {
+    day_of_week: day,
+    is_open: h != null,
+    start_time: h ? h.start : null,
+    end_time: h ? h.end : null,
+  };
+});
 
 export const WorkingHours: React.FC = () => {
   const { refresh } = useClinicHours();
@@ -37,7 +38,7 @@ export const WorkingHours: React.FC = () => {
         .select('day_of_week, is_open, start_time, end_time');
 
       if (data && data.length > 0) {
-        const mapped = DAYS.map(day => {
+        const mapped = DAYS_OF_WEEK.map(day => {
           const row = data.find((r: any) => r.day_of_week === day);
           if (row) {
             return {
@@ -66,8 +67,8 @@ export const WorkingHours: React.FC = () => {
         updated.end_time = null;
       }
       if (field === 'is_open' && value && !updated.start_time) {
-        updated.start_time = '09:00';
-        updated.end_time = '17:00';
+        updated.start_time = FALLBACK_OPEN_HOURS.start;
+        updated.end_time = FALLBACK_OPEN_HOURS.end;
       }
       return updated;
     }));
@@ -92,21 +93,25 @@ export const WorkingHours: React.FC = () => {
       }
     }
 
-    for (const day of days) {
-      const { error: err } = await supabase
+    // Run the seven per-day updates concurrently — one round-trip of latency, not seven.
+    // (RLS on clinic_settings only permits UPDATE, so an upsert would be denied.)
+    const results = await Promise.all(days.map(day =>
+      supabase
         .from('clinic_settings')
         .update({
           is_open: day.is_open,
           start_time: day.start_time,
           end_time: day.end_time,
         })
-        .eq('day_of_week', day.day_of_week);
+        .eq('day_of_week', day.day_of_week)
+        .then(res => ({ day: day.day_of_week, error: res.error })),
+    ));
 
-      if (err) {
-        setError(`Failed to update ${day.day_of_week}`);
-        setSaving(false);
-        return;
-      }
+    const failed = results.find(r => r.error);
+    if (failed) {
+      setError(`Failed to update ${failed.day}`);
+      setSaving(false);
+      return;
     }
 
     await refresh();
@@ -118,12 +123,6 @@ export const WorkingHours: React.FC = () => {
     setDays(DEFAULTS.map(d => ({ ...d })));
     setSuccess('');
     setError('');
-  };
-
-  const formatTimeLabel = (t: string) => {
-    const [h, m] = t.split(':').map(Number);
-    const p = h >= 12 ? 'PM' : 'AM';
-    return `${h === 0 ? 12 : h > 12 ? h - 12 : h}:${String(m).padStart(2, '0')} ${p}`;
   };
 
   if (loading) {
@@ -197,7 +196,7 @@ export const WorkingHours: React.FC = () => {
 
               <div className="wh-col-preview">
                 {day.is_open && day.start_time && day.end_time ? (
-                  <span className="wh-preview-text">{formatTimeLabel(day.start_time)} – {formatTimeLabel(day.end_time)}</span>
+                  <span className="wh-preview-text">{formatTime12h(day.start_time)} – {formatTime12h(day.end_time)}</span>
                 ) : (
                   <span className="wh-preview-closed">Closed</span>
                 )}

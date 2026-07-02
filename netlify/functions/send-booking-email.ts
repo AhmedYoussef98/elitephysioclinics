@@ -1,4 +1,5 @@
 import type { Handler } from '@netlify/functions';
+import { createClient } from '@supabase/supabase-js';
 
 interface BookingPayload {
   patient_name: string;
@@ -12,8 +13,20 @@ interface BookingPayload {
 }
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? '';
+const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY ?? '';
 const CLINIC_EMAIL = 'elitephysioclinics@gmail.com';
 const FROM_EMAIL = 'Elite Physio Clinics <onboarding@resend.dev>';
+
+/** Escape user-supplied text before interpolating into email HTML (prevents injection). */
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 const CLINIC_INFO = {
   name: 'Elite Physio Clinics',
@@ -49,22 +62,22 @@ function clinicEmailHtml(r: BookingPayload): string {
       <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#0a1f13;border:1px solid #c9a042;">
         <tr><td style="padding:32px 40px;border-bottom:1px solid rgba(201,160,66,0.2);">
           <div style="font-size:11px;letter-spacing:0.24em;text-transform:uppercase;color:#c9a042;font-weight:700;">New Booking Received</div>
-          <h1 style="margin:8px 0 0;font-family:Georgia,serif;font-size:28px;font-weight:300;color:#faf6ef;line-height:1.2;">${r.patient_name}</h1>
+          <h1 style="margin:8px 0 0;font-family:Georgia,serif;font-size:28px;font-weight:300;color:#faf6ef;line-height:1.2;">${escapeHtml(r.patient_name)}</h1>
         </td></tr>
         <tr><td style="padding:28px 40px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="color:#faf6ef;font-size:14px;line-height:1.8;">
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(250,246,239,0.08);color:rgba(250,246,239,0.55);text-transform:uppercase;letter-spacing:0.12em;font-size:11px;">Reference</td>
-                <td style="padding:8px 0;border-bottom:1px solid rgba(250,246,239,0.08);text-align:right;color:#c9a042;font-weight:600;">${r.booking_reference}</td></tr>
+                <td style="padding:8px 0;border-bottom:1px solid rgba(250,246,239,0.08);text-align:right;color:#c9a042;font-weight:600;">${escapeHtml(r.booking_reference)}</td></tr>
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(250,246,239,0.08);color:rgba(250,246,239,0.55);text-transform:uppercase;letter-spacing:0.12em;font-size:11px;">Condition</td>
-                <td style="padding:8px 0;border-bottom:1px solid rgba(250,246,239,0.08);text-align:right;">${r.condition_title}</td></tr>
+                <td style="padding:8px 0;border-bottom:1px solid rgba(250,246,239,0.08);text-align:right;">${escapeHtml(r.condition_title)}</td></tr>
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(250,246,239,0.08);color:rgba(250,246,239,0.55);text-transform:uppercase;letter-spacing:0.12em;font-size:11px;">Date</td>
                 <td style="padding:8px 0;border-bottom:1px solid rgba(250,246,239,0.08);text-align:right;">${formatDate(r.date)}</td></tr>
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(250,246,239,0.08);color:rgba(250,246,239,0.55);text-transform:uppercase;letter-spacing:0.12em;font-size:11px;">Time</td>
                 <td style="padding:8px 0;border-bottom:1px solid rgba(250,246,239,0.08);text-align:right;">${formatTime(r.start_time)} &ndash; ${formatTime(r.end_time)}</td></tr>
             <tr><td style="padding:8px 0;border-bottom:1px solid rgba(250,246,239,0.08);color:rgba(250,246,239,0.55);text-transform:uppercase;letter-spacing:0.12em;font-size:11px;">Phone</td>
-                <td style="padding:8px 0;border-bottom:1px solid rgba(250,246,239,0.08);text-align:right;"><a href="tel:${r.patient_phone}" style="color:#faf6ef;text-decoration:none;">${r.patient_phone}</a></td></tr>
+                <td style="padding:8px 0;border-bottom:1px solid rgba(250,246,239,0.08);text-align:right;"><a href="tel:${escapeHtml(r.patient_phone)}" style="color:#faf6ef;text-decoration:none;">${escapeHtml(r.patient_phone)}</a></td></tr>
             <tr><td style="padding:8px 0;color:rgba(250,246,239,0.55);text-transform:uppercase;letter-spacing:0.12em;font-size:11px;">Email</td>
-                <td style="padding:8px 0;text-align:right;"><a href="mailto:${r.patient_email}" style="color:#faf6ef;text-decoration:none;">${r.patient_email}</a></td></tr>
+                <td style="padding:8px 0;text-align:right;"><a href="mailto:${escapeHtml(r.patient_email)}" style="color:#faf6ef;text-decoration:none;">${escapeHtml(r.patient_email)}</a></td></tr>
           </table>
         </td></tr>
         <tr><td style="padding:20px 40px;background:rgba(201,160,66,0.05);border-top:1px solid rgba(201,160,66,0.15);">
@@ -84,15 +97,15 @@ function patientEmailHtml(r: BookingPayload): string {
       <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#0a1f13;border:1px solid #c9a042;">
         <tr><td style="padding:40px;border-bottom:1px solid rgba(201,160,66,0.2);text-align:center;">
           <div style="font-size:11px;letter-spacing:0.24em;text-transform:uppercase;color:#c9a042;font-weight:700;">Booking Confirmed</div>
-          <h1 style="margin:12px 0 0;font-family:Georgia,serif;font-size:32px;font-weight:300;color:#faf6ef;line-height:1.2;">Thank you, ${r.patient_name.split(' ')[0]}</h1>
+          <h1 style="margin:12px 0 0;font-family:Georgia,serif;font-size:32px;font-weight:300;color:#faf6ef;line-height:1.2;">Thank you, ${escapeHtml(r.patient_name.split(' ')[0])}</h1>
           <p style="margin:12px 0 0;color:rgba(250,246,239,0.65);font-size:14px;line-height:1.6;">Your appointment at Elite Physio Clinics has been confirmed.</p>
         </td></tr>
         <tr><td style="padding:32px 40px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="color:#faf6ef;font-size:14px;line-height:1.8;">
             <tr><td style="padding:10px 0;border-bottom:1px solid rgba(250,246,239,0.08);color:rgba(250,246,239,0.55);text-transform:uppercase;letter-spacing:0.12em;font-size:11px;">Reference</td>
-                <td style="padding:10px 0;border-bottom:1px solid rgba(250,246,239,0.08);text-align:right;color:#c9a042;font-weight:600;">${r.booking_reference}</td></tr>
+                <td style="padding:10px 0;border-bottom:1px solid rgba(250,246,239,0.08);text-align:right;color:#c9a042;font-weight:600;">${escapeHtml(r.booking_reference)}</td></tr>
             <tr><td style="padding:10px 0;border-bottom:1px solid rgba(250,246,239,0.08);color:rgba(250,246,239,0.55);text-transform:uppercase;letter-spacing:0.12em;font-size:11px;">Treatment</td>
-                <td style="padding:10px 0;border-bottom:1px solid rgba(250,246,239,0.08);text-align:right;">${r.condition_title}</td></tr>
+                <td style="padding:10px 0;border-bottom:1px solid rgba(250,246,239,0.08);text-align:right;">${escapeHtml(r.condition_title)}</td></tr>
             <tr><td style="padding:10px 0;border-bottom:1px solid rgba(250,246,239,0.08);color:rgba(250,246,239,0.55);text-transform:uppercase;letter-spacing:0.12em;font-size:11px;">Date</td>
                 <td style="padding:10px 0;border-bottom:1px solid rgba(250,246,239,0.08);text-align:right;">${formatDate(r.date)}</td></tr>
             <tr><td style="padding:10px 0;color:rgba(250,246,239,0.55);text-transform:uppercase;letter-spacing:0.12em;font-size:11px;">Time</td>
@@ -157,6 +170,31 @@ const handler: Handler = async (event) => {
     booking = JSON.parse(event.body ?? '');
   } catch {
     return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) };
+  }
+
+  if (!booking?.patient_email || !booking?.booking_reference) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Missing booking details' }) };
+  }
+
+  // Verify the booking actually exists before sending. This prevents the endpoint
+  // from being used as an open relay to send branded emails to arbitrary recipients.
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.error('Missing SUPABASE_URL / SUPABASE_ANON_KEY — cannot verify booking');
+    return { statusCode: 500, body: JSON.stringify({ error: 'Email verification not configured' }) };
+  }
+
+  try {
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { data: verified, error: verifyError } = await supabase.rpc('verify_booking', {
+      p_reference: booking.booking_reference,
+      p_email: booking.patient_email,
+    });
+    if (verifyError || verified !== true) {
+      return { statusCode: 403, body: JSON.stringify({ error: 'Booking could not be verified' }) };
+    }
+  } catch (err) {
+    console.error('Booking verification failed:', err);
+    return { statusCode: 502, body: JSON.stringify({ error: 'Verification error' }) };
   }
 
   const results = await Promise.allSettled([

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { supabase } from '../../lib/supabase';
+import { formatTime12h, formatDate, toLocalDateKey } from '../../lib/format';
 import { Calendar, CheckCircle, XCircle, Clock, Users, ArrowRight, TrendingUp } from 'lucide-react';
 
 interface Appointment {
@@ -40,10 +41,10 @@ export const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<Stats>({ todayTotal: 0, todayConfirmed: 0, todayCompleted: 0, todayCancelled: 0, weekTotal: 0, weekConfirmed: 0 });
   const [loading, setLoading] = useState(true);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = toLocalDateKey(new Date());
   const weekEnd = new Date();
   weekEnd.setDate(weekEnd.getDate() + 7);
-  const weekEndStr = weekEnd.toISOString().split('T')[0];
+  const weekEndStr = toLocalDateKey(weekEnd);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -73,14 +74,6 @@ export const Dashboard: React.FC = () => {
     };
     fetchAll();
   }, []);
-
-  const formatTime = (t: string) => {
-    const [h, m] = t.split(':').map(Number);
-    const p = h >= 12 ? 'PM' : 'AM';
-    return `${h === 0 ? 12 : h > 12 ? h - 12 : h}:${String(m).padStart(2, '0')} ${p}`;
-  };
-
-  const formatDate = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 
   const timeAgo = (iso: string) => {
     const diff = Date.now() - new Date(iso).getTime();
@@ -160,8 +153,8 @@ export const Dashboard: React.FC = () => {
               {todayAppointments.map(apt => (
                 <div key={apt.id} className="dash-timeline-item">
                   <div className="dash-timeline-time">
-                    <span className="dash-time-primary">{formatTime(apt.start_time)}</span>
-                    <span className="dash-time-end">{formatTime(apt.end_time)}</span>
+                    <span className="dash-time-primary">{formatTime12h(apt.start_time)}</span>
+                    <span className="dash-time-end">{formatTime12h(apt.end_time)}</span>
                   </div>
                   <div className="dash-timeline-dot" style={{ background: STATUS_DOT[apt.status] || '#64748b' }} />
                   <div className="dash-timeline-content">
@@ -188,10 +181,10 @@ export const Dashboard: React.FC = () => {
               <div className="dash-upcoming-list">
                 {upcomingAppointments.map(apt => (
                   <div key={apt.id} className="dash-upcoming-item">
-                    <div className="dash-upcoming-date">{formatDate(apt.date)}</div>
+                    <div className="dash-upcoming-date">{formatDate(apt.date, { weekday: 'short', day: 'numeric', month: 'short' })}</div>
                     <div className="dash-upcoming-detail">
                       <span className="dash-upcoming-name">{apt.patient_name}</span>
-                      <span className="dash-upcoming-time">{formatTime(apt.start_time)}</span>
+                      <span className="dash-upcoming-time">{formatTime12h(apt.start_time)}</span>
                     </div>
                   </div>
                 ))}

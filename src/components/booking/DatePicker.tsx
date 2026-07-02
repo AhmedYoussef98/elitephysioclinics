@@ -2,19 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { BOOKING_WINDOW_WEEKS } from '../../lib/constants';
 import { supabase } from '../../lib/supabase';
+import { toLocalDateKey } from '../../lib/format';
 import { useClinicHours } from '../../context/ClinicHoursContext';
 
 interface DatePickerProps {
   selectedDate: string;
   onSelect: (date: string) => void;
   isMobile: boolean;
-}
-
-function formatDateKey(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
 }
 
 export const DatePicker: React.FC<DatePickerProps> = ({ selectedDate, onSelect, isMobile }) => {
@@ -38,8 +32,8 @@ export const DatePicker: React.FC<DatePickerProps> = ({ selectedDate, onSelect, 
 
   useEffect(() => {
     if (dates.length === 0) return;
-    const fromDate = formatDateKey(dates[0]);
-    const toDate = formatDateKey(dates[dates.length - 1]);
+    const fromDate = toLocalDateKey(dates[0]);
+    const toDate = toLocalDateKey(dates[dates.length - 1]);
 
     supabase.rpc('get_blocked_dates', { from_date: fromDate, to_date: toDate })
       .then(({ data }) => {
@@ -117,7 +111,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({ selectedDate, onSelect, 
             {week.map((day, di) => {
               if (!day) return <div key={di} />;
 
-              const dateStr = formatDateKey(day);
+              const dateStr = toLocalDateKey(day);
               const dayName = day.toLocaleDateString('en-US', { weekday: 'long' });
               const isClosedDay = clinicHours[dayName] === null || clinicHours[dayName] === undefined;
               const today = new Date();
@@ -126,7 +120,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({ selectedDate, onSelect, 
               const isBlocked = blockedDates.has(dateStr);
               const isDisabled = isClosedDay || isPast || isBlocked;
               const isSelected = dateStr === selectedDate;
-              const isToday = formatDateKey(today) === dateStr;
+              const isToday = toLocalDateKey(today) === dateStr;
 
               return (
                 <button

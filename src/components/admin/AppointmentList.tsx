@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { AppointmentActions } from './AppointmentActions';
+import { formatTime12h, formatDate } from '../../lib/format';
 import { Search, Filter, Calendar } from 'lucide-react';
 
 interface Appointment {
@@ -61,16 +62,6 @@ export const AppointmentList: React.FC = () => {
         a.condition_title.toLowerCase().includes(search.toLowerCase())
       )
     : appointments;
-
-  const formatTime = (t: string) => {
-    const [h, m] = t.split(':').map(Number);
-    const p = h >= 12 ? 'PM' : 'AM';
-    return `${h === 0 ? 12 : h > 12 ? h - 12 : h}:${String(m).padStart(2, '0')} ${p}`;
-  };
-
-  const formatDate = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', {
-    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
-  });
 
   const statusCounts = {
     all: appointments.length,
@@ -157,7 +148,7 @@ export const AppointmentList: React.FC = () => {
                 <tr key={apt.id}>
                   <td><code className="apt-ref">{apt.booking_reference}</code></td>
                   <td className="apt-date-cell">{formatDate(apt.date)}</td>
-                  <td className="apt-time-cell">{formatTime(apt.start_time)} <span className="apt-time-dim">- {formatTime(apt.end_time)}</span></td>
+                  <td className="apt-time-cell">{formatTime12h(apt.start_time)} <span className="apt-time-dim">- {formatTime12h(apt.end_time)}</span></td>
                   <td className="apt-name-cell">
                     <span className="apt-patient-name">{apt.patient_name}</span>
                     <span className="apt-patient-email">{apt.patient_email}</span>
